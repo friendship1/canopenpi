@@ -3,4 +3,5 @@
 	url = https://github.com/Physical-Intelligence/aloha.git
 [submodule "third_party/libero"]
 	path = third_party/libero
-	url = https://github.com/Lifelong-Robot-Learning/LIBERO.git
+	url = git@github.com:friendship1/libero-plus-canon.git
+	branch = main
