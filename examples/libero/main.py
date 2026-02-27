@@ -14,6 +14,8 @@ from openpi_client import websocket_client_policy as _websocket_client_policy
 import tqdm
 import tyro
 
+from voxel_utils import compute_voxel_grid, generate_hemisphere_cameras
+
 LIBERO_DUMMY_ACTION = [0.0] * 6 + [-1.0]
 LIBERO_ENV_RESOLUTION = 256  # resolution used to render training data
 
@@ -36,6 +38,14 @@ class Args:
     )
     num_steps_wait: int = 10  # Number of steps to wait for objects to stabilize i n sim
     num_trials_per_task: int = 1  # Number of rollouts per task
+
+    #################################################################################################################
+    # Voxel grid parameters
+    #################################################################################################################
+    enable_voxels: bool = False  # Enable voxel grid generation
+    voxel_grid_size: int = 32  # Voxel grid resolution per axis
+    voxel_extent: float = 0.3  # Spatial extent in meters (cube side)
+    voxel_n_cameras: int = 10  # Number of hemisphere cameras for voxels
 
     #################################################################################################################
     # Utils
@@ -71,6 +81,10 @@ def eval_libero(args: Args) -> None:
         raise ValueError(f"Unknown task suite: {args.task_suite_name}")
 
     client = _websocket_client_policy.WebsocketClientPolicy(args.host, args.port)
+
+    # Pre-compute hemisphere camera positions for voxel rendering
+    if args.enable_voxels:
+        camera_positions = generate_hemisphere_cameras(n_cameras=args.voxel_n_cameras)
 
     # Start evaluation
     total_episodes, total_successes = 0, 0
@@ -139,6 +153,14 @@ def eval_libero(args: Args) -> None:
                             ),
                             "prompt": str(task_description),
                         }
+
+                        if args.enable_voxels:
+                            voxel_grid = compute_voxel_grid(
+                                env.sim, obs, camera_positions, "agentview",
+                                LIBERO_ENV_RESOLUTION, LIBERO_ENV_RESOLUTION,
+                                grid_size=args.voxel_grid_size, extent=args.voxel_extent,
+                            )
+                            element["observation/voxel_grid"] = voxel_grid
 
                         # Query model to get action
                         action_chunk = client.infer(element)["actions"]
