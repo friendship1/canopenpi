@@ -883,6 +883,42 @@ _CONFIGS = [
         pytorch_weight_path="/path/to/your/pytorch_weight_path",
         num_train_steps=40_000,
     ),
+    TrainConfig(
+        name="pi05_libero_plus_canon_base_long",
+        model=pi0_config.Pi0Config(pi05=True, action_horizon=50, max_token_len=600),
+        data=LeRobotLiberoDataConfig(
+            repo_id="Sylvest/libero_plus_lerobot",
+            base_config=DataConfig(prompt_from_task=True),
+            extra_delta_transform=False,
+            repack_transforms=_transforms.Group(
+                inputs=[
+                    _transforms.RepackTransform(
+                        {
+                            "observation/image": "observation.images.front",
+                            "observation/wrist_image": "observation.images.wrist",
+                            "observation/state": "observation.state",
+                            "actions": "action",
+                            "prompt": "prompt",
+                        }
+                    )
+                ]
+            ),
+            action_sequence_keys=("action",)
+        ),
+        batch_size=32,
+        num_workers=60,
+        lr_schedule=_optimizer.CosineDecaySchedule(
+            warmup_steps=1000,
+            peak_lr=1e-4,
+            decay_steps=50_000,
+            decay_lr=2.5e-6,
+        ),
+        optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
+        ema_decay=0.999,
+        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
+        pytorch_weight_path="/path/to/your/pytorch_weight_path",
+        num_train_steps=60_000,
+    ),
     #
     # Fine-tuning Aloha configs.
     #
